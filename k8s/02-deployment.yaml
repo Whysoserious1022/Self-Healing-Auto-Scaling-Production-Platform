@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: production-api
+  namespace: production-platform
+  labels:
+    app: production-api
+    tier: api
+    release: stable
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: production-api
+  template:
+    metadata:
+      labels:
+        app: production-api
+        tier: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8000"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - production-api
+                topologyKey: "kubernetes.io/hostname"
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: api
+          image: production-api:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: production-api-config
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          
+          # 1. Startup Probe: Allows initial container boot without triggering premature liveness restart
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 2
+            periodSeconds: 2
+            failureThreshold: 15
+
+          # 2. Liveness Probe: Detects internal failure, deadlocks, or crashes and triggers auto-restart
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          # 3. Readiness Probe: Verifies traffic readiness. Removes pod from load balancer if unhealthy
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            periodSeconds: 3
+            timeoutSeconds: 2
+            failureThreshold: 2
+            successThreshold: 1
+
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]

@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # 1. Production API instance
+  production-api:
+    build:
+      context: ../app
+      dockerfile: Dockerfile
+    container_name: production-api
+    ports:
+      - "8000:8000"
+    environment:
+      - POD_NAME=pod-production-1
+      - NODE_NAME=node-primary
+      - ENV=production
+      - BASE_CPU_WORK_CYCLES=150000
+    networks:
+      - platform-net
+
+  # 2. Prometheus Metrics Collector & Rule Engine
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - platform-net
+    depends_on:
+      - production-api
+
+  # 3. Alertmanager Notification & Recovery Dispatcher
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - platform-net
+
+  # 4. Grafana Dashboards & Visualizations
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards/platform_dashboard.json:/etc/grafana/provisioning/dashboards/platform_dashboard.json:ro
+    networks:
+      - platform-net
+    depends_on:
+      - prometheus
+
+  # 5. Automated Recovery Engine
+  recovery-engine:
+    build:
+      context: ../recovery
+      dockerfile: Dockerfile
+    container_name: recovery-engine
+    ports:
+      - "9099:9099"
+    environment:
+      - PORT=9099
+      - SIMULATE_K8S_COMMANDS=true
+    networks:
+      - platform-net
+
+networks:
+  platform-net:
+    driver: bridge

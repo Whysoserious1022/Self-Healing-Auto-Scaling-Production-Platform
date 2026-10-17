@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: production-api-config
+  namespace: production-platform
+  labels:
+    app: production-api
+data:
+  ENV: "production"
+  PORT: "8000"
+  ENABLE_CHAOS: "true"
+  BASE_CPU_WORK_CYCLES: "150000"
+  APP_VERSION: "v1.2.0"

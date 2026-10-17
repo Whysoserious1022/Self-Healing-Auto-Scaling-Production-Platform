@@ -1,0 +1,60 @@
+groups:
+  - name: production_platform_alerts
+    rules:
+      # 1. High CPU Utilization Alert (> 70% for 30s)
+      - alert: HighCpuUsage
+        expr: process_cpu_utilization_percent > 70
+        for: 30s
+        labels:
+          severity: critical
+          component: api
+          action: auto-scale
+        annotations:
+          summary: "Pod CPU utilization above 70% threshold"
+          description: "Pod {{ $labels.pod_name }} is experiencing sustained high CPU ({{ $value }}%). HPA scale-up triggered."
+
+      # 2. High Error Rate Alert (> 5% 5xx over 1m)
+      - alert: HighErrorRate
+        expr: (sum(rate(http_requests_total{status_code=~"5.."}[1m])) / sum(rate(http_requests_total[1m]))) * 100 > 5
+        for: 30s
+        labels:
+          severity: critical
+          component: api
+          action: automated-remediation
+        annotations:
+          summary: "HTTP 5xx error rate exceeded 5%"
+          description: "Production API is failing {{ $value | printf \"%.2f\" }}% of user requests."
+
+      # 3. Pod Health / Liveness Probe Failure
+      - alert: PodUnhealthy
+        expr: pod_health_status == 0
+        for: 10s
+        labels:
+          severity: critical
+          component: kubernetes
+          action: restart-container
+        annotations:
+          summary: "Pod liveness probe failing"
+          description: "Pod {{ $labels.pod_name }} reported unhealthy status. Kubelet container restart initiated."
+
+      # 4. High Request Latency (> 300ms p95)
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le)) > 0.3
+        for: 45s
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "P95 Latency breached 300ms SLA"
+          description: "95th percentile latency is {{ $value | printf \"%.3f\" }}s."
+
+      # 5. Pod Scaling Surge Event (Alert on HPA reaching max scale of 5)
+      - alert: HPAMaxScaleReached
+        expr: count(pod_health_status == 1) >= 5
+        for: 1m
+        labels:
+          severity: warning
+          component: autoscaler
+        annotations:
+          summary: "HPA reached max pod capacity of 5"
+          description: "Cluster has scaled to maximum configured replicas (5 pods) to absorb traffic burst."

@@ -1,0 +1,29 @@
+# Python & Environment
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Testing & Logs
+.pytest_cache/
+*.log
+.coverage
+htmlcov/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Terraform Local State
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl

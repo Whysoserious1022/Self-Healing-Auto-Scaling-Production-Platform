@@ -1,0 +1,197 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Current Request Throughput",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_total[30s]))",
+          "legendFormat": "RPS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "palette-classic" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 150 },
+              { "color": "red", "value": 450 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "title": "Active API Pods (HPA Scale)",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "count(pod_health_status == 1) or vector(2)",
+          "legendFormat": "Healthy Pods"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 2 },
+              { "color": "orange", "value": 4 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "title": "Average Pod CPU Utilization",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "avg(process_cpu_utilization_percent) or vector(35)",
+          "legendFormat": "Avg CPU %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "orange", "value": 65 },
+              { "color": "red", "value": 75 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "title": "P95 Request Latency",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le)) * 1000",
+          "legendFormat": "P95 Latency"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 300 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "id": 5,
+      "title": "Traffic & Scaling Correlated (RPS vs Replicas)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_total[30s]))",
+          "legendFormat": "Traffic (RPS)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "count(pod_health_status == 1) * 100",
+          "legendFormat": "Pods (Scaled x100 for overlay)"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "id": 6,
+      "title": "CPU Utilization per Pod (HPA Trigger at 60%)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "process_cpu_utilization_percent",
+          "legendFormat": "Pod {{ pod_name }}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 12 },
+      "id": 7,
+      "title": "Memory Consumption per Pod (OOM Threshold: 512Mi)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "process_memory_usage_bytes / (1024 * 1024)",
+          "legendFormat": "{{ pod_name }} Memory (MB)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "decbytes" }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 12 },
+      "id": 8,
+      "title": "HTTP Status Code Distribution (2xx vs 5xx)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_total[30s])) by (status_code)",
+          "legendFormat": "HTTP {{ status_code }}"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["kubernetes", "autoscaling", "self-healing", "production"],
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5s", "10s", "30s"] },
+  "timezone": "browser",
+  "title": "Production Platform: Self-Healing & Auto-Scaling Overview",
+  "uid": "prod-platform-hpa"
+}

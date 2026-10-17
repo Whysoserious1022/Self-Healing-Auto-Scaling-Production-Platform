@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegisAuto Cloud | Autonomous Healing Engine & Remediation Matrix</title>
+  <meta name="description" content="Mission-critical Autonomous Healing Engine and Auto-Scaling Production Platform for Kubernetes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="aegis-theme">
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Global Application Wrapper -->
+  <div class="aegis-shell">
+
+    <!-- TOP GLOBAL HEADER -->
+    <header class="aegis-top-header" role="banner">
+      <div class="header-left">
+        <div class="brand-cluster" onclick="switchNavDeck('self-healing')">
+          <div class="brand-mark" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="2" width="9" height="9" rx="1.5" fill="#181512" />
+              <rect x="13" y="2" width="9" height="9" rx="1.5" fill="#DE5437" />
+              <rect x="2" y="13" width="9" height="9" rx="1.5" fill="#181512" opacity="0.75" />
+              <rect x="13" y="13" width="9" height="9" rx="1.5" fill="#181512" />
+              <circle cx="12" cy="12" r="2.5" fill="#FFFFFF" />
+            </svg>
+          </div>
+          <div class="brand-name-group">
+            <span class="brand-name">AegisAuto Cloud</span>
+          </div>
+        </div>
+
+        <div class="region-pill-tag">
+          <span class="tag-accent">US-EAST-1 (PROD-CANARY)</span>
+          <span class="tag-sep">•</span>
+          <span class="tag-nodes" id="top-nodes-online">14,820 NODES ONLINE</span>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <div class="search-capsule">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input type="text" id="global-search-input" placeholder="Search telemetry, playbooks, pods, incidents..." oninput="handleGlobalSearch(this.value)">
+          <kbd class="search-kbd">⌘K</kbd>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="top-nav-btn" onclick="openModal('remediation-log-modal')" title="View complete automated remediation audit trail">
+          <span class="btn-text">Remediation Log</span>
+        </button>
+        <button class="top-nav-btn btn-peach" onclick="openModal('chaos-drill-modal')" title="Inject chaos drills: CPU spike, memory leak, deadlock">
+          <span class="btn-text">Chaos Drill Mode</span>
+        </button>
+        <button class="top-nav-btn btn-salmon" onclick="openModal('alerts-modal')" title="Active production alerts and warning states">
+          <span class="btn-text" id="top-alerts-text">Alerts (3 degraded, 0 critical)</span>
+        </button>
+
+        <div class="user-profile-widget" onclick="openModal('guardian-assistant-modal')" title="Marcus Vance • Staff SRE ROOT (Click for Copilot)">
+          <div class="user-avatar-circle">
+            <img src="/static/guardian_avatar.jpg" alt="Marcus Vance Avatar">
+          </div>
+          <div class="user-meta-lines">
+            <span class="user-display-name">Marcus Vance</span>
+            <span class="user-role-badge">Staff SRE <span class="role-root">ROOT</span></span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- GLOBAL TELEMETRY RIBBON -->
+    <section class="global-telemetry-ribbon" aria-label="Global Fleet Telemetry">
+      <div class="ribbon-metric">
+        <span class="ribbon-label">CPU FLEET LOAD:</span>
+        <strong class="ribbon-value" id="ribbon-cpu">68.4%</strong>
+      </div>
+      <div class="ribbon-metric">
+        <span class="ribbon-label">GLOBAL RPS:</span>
+        <strong class="ribbon-value" id="ribbon-rps">4.2M req/s</strong>
+      </div>
+      <div class="ribbon-metric">
+        <span class="ribbon-label">AUTO-REMEDIATIONS:</span>
+        <strong class="ribbon-value" id="ribbon-remediations">38/hr resolved</strong>
+      </div>
+      <div class="ribbon-metric">
+        <span class="ribbon-label">P99 LATENCY:</span>
+        <strong class="ribbon-value" id="ribbon-p99">16.2ms</strong>
+      </div>
+      <div class="ribbon-metric status-daemon">
+        <span class="ribbon-label">AUTONOMOUS DAEMON:</span>
+        <div class="daemon-state-wrap">
+          <span class="pulse-indicator"></span>
+          <strong class="ribbon-value-active" id="ribbon-daemon-status">ACTIVE / ENFORCING</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN BODY GRID (LEFT NAVIGATION DECK + CONTENT CANVAS) -->
+    <div class="aegis-body-layout">
+
+      <!-- LEFT SIDEBAR: NAVIGATION DECK -->
+      <aside class="navigation-deck" role="navigation" aria-label="Main Navigation Deck">
+        <div class="nav-deck-header">
+          <span class="deck-title">NAVIGATION DECK</span>
+        </div>
+
+        <nav class="deck-nav-list">
+          <button class="deck-nav-item" id="nav-btn-cluster" onclick="switchNavDeck('cluster')">
+            <span class="nav-icon">⊞</span>
+            <span class="nav-label">Cluster Overview</span>
+          </button>
+          <button class="deck-nav-item active" id="nav-btn-self-healing" onclick="switchNavDeck('self-healing')">
+            <span class="nav-icon">⚙</span>
+            <span class="nav-label">Self-Healing Engine</span>
+          </button>
+          <button class="deck-nav-item" id="nav-btn-autoscaling" onclick="switchNavDeck('autoscaling')">
+            <span class="nav-icon">📈</span>
+            <span class="nav-label">Auto-Scaling Policies</span>
+          </button>
+          <button class="deck-nav-item" id="nav-btn-topology" onclick="switchNavDeck('topology')">
+            <span class="nav-icon">⚯</span>
+            <span class="nav-label">Live Topology & Incidents</span>
+          </button>
+        </nav>
+
+        <!-- Sidebar Bottom Mesh Routing Status -->
+        <div class="mesh-routing-widget">
+          <div class="mesh-header-row">
+            <span class="mesh-badge-label">MESH ROUTING</span>
+            <span class="mesh-status-dot"></span>
+          </div>
+          <div class="mesh-eng-title">SYNAPSE-v4 ENGAGED</div>
+          <p class="mesh-description">Autonomous Failover active across 3 AZ zones</p>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT VIEW CANVAS -->
+      <main class="content-canvas" role="main">
+
+        <!-- VIEW 1: SELF-HEALING ENGINE & REMEDIATION MATRIX (The Stitch Master Screen) -->
+        <section class="deck-view active" id="view-self-healing">
+          
+          <!-- View Master Header -->
+          <div class="canvas-header-row">
+            <div class="canvas-title-group">
+              <span class="core-daemon-tag">CORE DAEMON - v4.8-K8S-AUTONOMOUS</span>
+              <div class="canvas-h1-row">
+                <span class="engine-gear-icon" aria-hidden="true">❖</span>
+                <h1 class="canvas-h1">Autonomous Healing Engine & Remediation Matrix</h1>
+              </div>
+            </div>
+
+            <div class="canvas-header-actions">
+              <div class="autonomous-active-pill" id="l4-badge">
+                <span class="dot-red">●</span>
+                <span>L4 FULL AUTONOMOUS ACTIVE</span>
+              </div>
+              <button class="action-btn-outline" id="override-btn" onclick="toggleSafetyOverride()">
+                Engage Manual Safety Override
+              </button>
+              <button class="action-btn-dark" onclick="triggerLiveDryRun()">
+                ▶ Trigger Live Dry Run
+              </button>
+            </div>
+          </div>
+
+          <!-- TOP 4 KPI STAT CARDS -->
+          <section class="kpi-four-grid">
+            <!-- KPI CARD 1 -->
+            <div class="kpi-card">
+              <div class="kpi-header-row">
+                <span class="kpi-label">AUTOMATED HEALING RATE</span>
+                <span class="kpi-tag-peach" id="kpi-healing-nominal">99.4% NOMINAL</span>
+              </div>
+              <div class="kpi-val-row">
+                <span class="kpi-number" id="kpi-healing-val">99.4%</span>
+                <span class="kpi-subtext" id="kpi-healing-resolved">420 of 422 Resolved</span>
+              </div>
+              <div class="kpi-footer-row">
+                <span class="kpi-foot-label">0 Pager Escalations</span>
+                <div class="sparkline-badge">
+                  <span class="spark-bar"></span>
+                  <span class="spark-text">Zero Page</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- KPI CARD 2 -->
+            <div class="kpi-card">
+              <div class="kpi-header-row">
+                <span class="kpi-label">AUTONOMOUS MTTR</span>
+                <span class="kpi-tag-peach" id="kpi-mttr-comparison">-99.8% vs Manual</span>
+              </div>
+              <div class="kpi-val-row">
+                <span class="kpi-number" id="kpi-mttr-val">1.4s</span>
+                <span class="kpi-subtext">10m 20s Baseline</span>
+              </div>
+              <div class="kpi-footer-row">
+                <span class="kpi-foot-label">eBPF Intercept → Pod Rebalance</span>
+                <span class="kpi-foot-sub">Sub-Second P50</span>
+              </div>
+            </div>
+
+            <!-- KPI CARD 3 -->
+            <div class="kpi-card">
+              <div class="kpi-header-row">
+                <span class="kpi-label">ACTIVE SAFETY INTERLOCKS</span>
+                <span class="kpi-tag-black">● ACTIVE</span>
+              </div>
+              <div class="kpi-val-row">
+                <span class="kpi-number">9 / 9</span>
+                <span class="kpi-subtext">Engaged</span>
+              </div>
+              <div class="kpi-footer-row">
+                <span class="kpi-foot-label">Blast-radius Clamp</span>
+                <span class="kpi-foot-sub">Canary Strict</span>
+              </div>
+            </div>
+
+            <!-- KPI CARD 4 -->
+            <div class="kpi-card">
+              <div class="kpi-header-row">
+                <span class="kpi-label">SELF-HEALING DAEMONS</span>
+                <span class="kpi-tag-peach">100% HEALTH</span>
+              </div>
+              <div class="kpi-val-row">
+                <span class="kpi-number" id="kpi-daemons-val">14,820</span>
+                <span class="kpi-subtext">Agent Polling</span>
+              </div>
+              <div class="kpi-footer-row">
+                <span class="kpi-foot-label">Zone Failover Canary Pool</span>
+                <span class="kpi-foot-sub">48 Ready Standby</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- TWO-COLUMN CORE OPERATIONAL MATRIX -->
+          <div class="matrix-split-grid">
+
+            <!-- LEFT COLUMN: PLAYBOOKS TABLE + EVENT TIMELINE -->
+            <div class="matrix-left-col">
+              
+              <!-- ACTIVE REMEDIATION PLAYBOOKS TABLE CARD -->
+              <div class="aegis-panel-card playbooks-panel">
+                <div class="panel-header-row">
+                  <div class="panel-title-with-icon">
+                    <span class="panel-icon-bars">☰</span>
+                    <h2 class="panel-title">Active Remediation Playbooks</h2>
+                  </div>
+                  <div class="panel-header-tags">
+                    <span class="pill-registered">5 Registered</span>
+                    <span class="pill-rollback">AUTO-ROLLBACK: <strong>ENABLED</strong></span>
+                  </div>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="aegis-playbook-table" id="playbooks-table">
+                    <thead>
+                      <tr>
+                        <th class="th-playbook">PLAYBOOK / WORKFLOW</th>
+                        <th class="th-num">REMEDIATIONS (24H)</th>
+                        <th class="th-num">AVG LATENCY</th>
+                        <th class="th-num">SUCCESS RATE</th>
+                        <th class="th-state">EXECUTION STATE</th>
+                      </tr>
+                    </thead>
+                    <tbody id="playbooks-tbody">
+                      <!-- Rendered dynamically by app.js with live telemetry -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="playbook-footer-bar">
+                  <span class="footer-note">Automated canary rollback enforced at 0.01% error budget violation</span>
+                  <a href="javascript:void(0)" class="footer-link" onclick="openModal('remediation-log-modal')">View All 24 Extended Playbooks ›</a>
+                </div>
+              </div>
+
+              <!-- AUTONOMOUS EVENT TIMELINE (REAL-TIME 60S) -->
+              <div class="aegis-panel-card timeline-panel">
+                <div class="panel-header-row">
+                  <div class="panel-title-with-icon">
+                    <span class="panel-icon-bars">📈</span>
+                    <h2 class="panel-title">Autonomous Event Timeline (Real-Time 60s)</h2>
+                  </div>
+                  <div class="panel-header-tags">
+                    <span class="mono-red-stat">LIVE INGESTION: 18.4K eps</span>
+                  </div>
+                </div>
+
+                <div class="timeline-subhead">
+                  <span class="timeline-metric-name">MUTATION VELOCITY (PODS/SEC)</span>
+                  <span class="timeline-peak-badge" id="timeline-peak-display">PEAK: 34 pods/s</span>
+                </div>
+
+                <!-- Live Sparkline Area Chart Canvas -->
+                <div class="timeline-chart-wrap">
+                  <canvas id="mutationVelocityCanvas" height="110"></canvas>
+                </div>
+
+                <div class="timeline-axis-markers">
+                  <span>T -60s</span>
+                  <span>T -30s</span>
+                  <span class="axis-live">LIVE (NOW)</span>
+                </div>
+
+                <div class="timeline-bottom-metrics">
+                  <div class="t-submetric">
+                    <span class="t-sub-lbl">DAEMON CPU</span>
+                    <strong class="t-sub-val" id="t-daemon-cpu">1.2% / Core</strong>
+                  </div>
+                  <div class="t-submetric">
+                    <span class="t-sub-lbl">eBPF PROBE HOOKS</span>
+                    <strong class="t-sub-val">428,102 Total</strong>
+                  </div>
+                  <div class="t-submetric">
+                    <span class="t-sub-lbl">CORRELATION RATIO</span>
+                    <strong class="t-sub-val">99.1% High</strong>
+                  </div>
+                  <div class="t-submetric">
+                    <span class="t-sub-lbl">FALSE POSITIVES</span>
+                    <strong class="t-sub-val">0.02% (24h)</strong>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: INCIDENT DEEP-DIVE + AI ROOT-CAUSE SYNTHESIZER -->
+            <div class="matrix-right-col">
+              
+              <!-- INCIDENT DEEP-DIVE CARD -->
+              <div class="aegis-panel-card incident-deep-dive-card">
+                <div class="panel-header-row">
+                  <span class="panel-section-title">INCIDENT DEEP-DIVE</span>
+                  <span class="pill-peach-resolved" id="incident-status-pill">AUTONOMOUSLY RESOLVED 1m 42s ago</span>
+                </div>
+
+                <div class="incident-main-heading">
+                  <h3 class="incident-h3" id="incident-title">#INC-8941: payment-service CPU Stall</h3>
+                </div>
+
+                <!-- 5-STEP CHRONOLOGICAL TELEMETRY FLOW -->
+                <div class="incident-step-flow" id="incident-steps-container">
+                  <div class="step-item">
+                    <div class="step-circle red-ring">1</div>
+                    <div class="step-content">
+                      <div class="step-headline-row">
+                        <strong class="step-title">eBPF Anomaly Detected</strong>
+                        <span class="step-t-stamp">T+0.00s</span>
+                      </div>
+                      <p class="step-desc">99.8% CPU saturation in <code class="code-token">payment-service-prod-7d4bf</code>. Scheduler starvation threshold exceeded.</p>
+                    </div>
+                  </div>
+
+                  <div class="step-item">
+                    <div class="step-circle dark-ring">2</div>
+                    <div class="step-content">
+                      <div class="step-headline-row">
+                        <strong class="step-title">Circuit Breaker Tripped</strong>
+                        <span class="step-t-stamp">T+0.12s</span>
+                      </div>
+                      <p class="step-desc">Downstream ingress severed by Envoy mesh filter to prevent cascade backlog into <code class="code-token">checkout-gateway</code>.</p>
+                    </div>
+                  </div>
+
+                  <div class="step-item">
+                    <div class="step-circle red-ring">3</div>
+                    <div class="step-content">
+                      <div class="step-headline-row">
+                        <strong class="step-title">Canary Replacement Spawned</strong>
+                        <span class="step-t-stamp">T+0.38s</span>
+                      </div>
+                      <p class="step-desc">Hot replacement pod <code class="code-token red-pill-token">payment-service-canary-4b11</code> initialized in 380ms on Node <code class="code-token">node-us-east-1a-09</code>.</p>
+                    </div>
+                  </div>
+
+                  <div class="step-item">
+                    <div class="step-circle dark-ring">4</div>
+                    <div class="step-content">
+                      <div class="step-headline-row">
+                        <strong class="step-title">Tainted Node Cordoned & DUMP Captured</strong>
+                        <span class="step-t-stamp">T+0.82s</span>
+                      </div>
+                      <p class="step-desc">Unhealthy node cordoned; SIGQUIT heap snapshot (41.2MB) captured and pushed to telemetry s3 bucket <code class="code-token">s3://telemetry/dumps/inc-8941.zst</code>.</p>
+                    </div>
+                  </div>
+
+                  <div class="step-item">
+                    <div class="step-circle red-ring">5</div>
+                    <div class="step-content">
+                      <div class="step-headline-row">
+                        <strong class="step-title">Incident Verified Resolved</strong>
+                        <span class="step-t-stamp font-bold">T+1.40s Total</span>
+                      </div>
+                      <p class="step-desc">Synthetic telemetry probe confirmed <strong>0 dropped customer transactions</strong>, 100% 2xx responses on retry loop.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="incident-footer-meta">
+                  <div class="meta-item"><span class="meta-label">Namespace:</span> <code class="meta-val">finance-prod</code></div>
+                  <div class="meta-item"><span class="meta-label">Pod UID:</span> <code class="meta-val">pod-9021a8f</code></div>
+                  <div class="meta-item"><span class="meta-label">Pager Escalated:</span> <strong class="meta-val-no">NO</strong></div>
+                </div>
+              </div>
+
+              <!-- AI ROOT-CAUSE SYNTHESIZER CARD -->
+              <div class="aegis-panel-card ai-synthesizer-card">
+                <div class="panel-header-row">
+                  <div class="synthesizer-title-group">
+                    <span class="pin-icon">⚲</span>
+                    <h3 class="panel-section-title">AI Root-Cause Synthesizer</h3>
+                  </div>
+                  <span class="pill-dark-confidence">● 98% CONFIDENCE</span>
+                </div>
+
+                <p class="synthesizer-lead">Automated multi-layer stack trace analysis & code correlation from runtime heap dump:</p>
+
+                <!-- Code Root Cause Box -->
+                <div class="code-analysis-box">
+                  <div class="code-top-ref">
+                    <span class="ref-danger">MUTEX STARVATION IN stream_reconciler.go:142</span>
+                    <span class="ref-lang">go1.22.4</span>
+                  </div>
+                  <div class="code-body-text">
+                    Unbuffered channel write blocks on <code>channel.sync()</code> while holding reader lock on global state. Rapid traffic burst caused 128 goroutines to queue indefinitely.
+                  </div>
+                </div>
+
+                <!-- Automated PR Proposal Box -->
+                <div class="pr-proposal-box">
+                  <div class="pr-header-row">
+                    <span class="pr-label">Automated PR Proposal:</span>
+                    <span class="pr-patch-file">stream_reconciler.go <span class="patch-badge">#patch-4402</span></span>
+                  </div>
+                  <div class="diff-view">
+                    <div class="diff-line diff-del">- mu.RLock(); defer mu.RUnlock()</div>
+                    <div class="diff-line diff-add">+ select { case ch &lt;- event: default: log.warn("dropped") }</div>
+                  </div>
+                </div>
+
+                <div class="pr-action-row">
+                  <button class="btn-merge-pr" id="btn-merge-pr" onclick="mergePrProposal()">
+                    <span class="pr-icon">⑂</span>
+                    <span id="merge-pr-text">Create & Merge PR #4482</span>
+                  </button>
+                  <button class="btn-icon-copy" onclick="copyPrDiff()" title="Copy unified diff to clipboard">
+                    📋
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- BOTTOM BANNER: MULTI-REGION INTERLOCK ENFORCEMENT MATRIX -->
+          <footer class="multi-region-banner">
+            <div class="banner-left-brand">
+              <div class="shield-badge-icon" aria-hidden="true">🛡</div>
+              <div class="banner-text-block">
+                <h4 class="banner-title">Multi-Region Interlock Enforcement Matrix</h4>
+                <p class="banner-sub">Preventing cascading catastrophic failures across US-East, EU-Central, and AP-South</p>
+              </div>
+            </div>
+
+            <div class="banner-pills-row">
+              <span class="pill-interlock">● Blast Radius Clamp: <strong>5% Max</strong></span>
+              <span class="pill-interlock">● Canary Rotation Threshold: <strong>100 req</strong></span>
+              <span class="pill-interlock">● Anti-Split-Brain Quorum: <strong>Active</strong></span>
+              <span class="pill-interlock-dark">✓ All 9 Systems Nominal</span>
+            </div>
+          </footer>
+
+        </section>
+
+        <!-- VIEW 2: CLUSTER OVERVIEW (Interactive Kubernetes Pod Fleet, Metrics, Real-Time Replicas) -->
+        <section class="deck-view" id="view-cluster">
+          <div class="canvas-header-row">
+            <div class="canvas-title-group">
+              <span class="core-daemon-tag">FLEET TELEMETRY & WORKER NODES</span>
+              <div class="canvas-h1-row">
+                <span class="engine-gear-icon">⊞</span>
+                <h1 class="canvas-h1">Kubernetes Cluster & Active Pod Fleet</h1>
+              </div>
+            </div>
+            <div class="canvas-header-actions">
+              <button class="action-btn-outline" onclick="triggerResetBaseline()">Reset Baseline (2 Pods)</button>
+              <button class="action-btn-dark" onclick="openModal('chaos-drill-modal')">Inject Pod Failure</button>
+            </div>
+          </div>
+
+          <!-- Active Pod Replicas Cards -->
+          <div class="pod-fleet-section">
+            <div class="pod-fleet-header">
+              <h2 class="section-title">Active Pod Replicas in Namespace: <code class="ns-code">production-platform</code></h2>
+              <span class="fleet-count-pill" id="fleet-count-pill">2 / 5 Pods Running</span>
+            </div>
+
+            <div class="pods-grid" id="pods-grid">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Real-Time Metrics Charts -->
+          <div class="cluster-charts-grid">
+            <div class="aegis-panel-card">
+              <div class="panel-header-row">
+                <h3 class="panel-title">Ingress Traffic (RPS) vs Active Replicas</h3>
+                <span class="pill-registered" id="chart-rps-indicator">100 req/sec</span>
+              </div>
+              <div style="height: 220px;">
+                <canvas id="trafficChartCanvas"></canvas>
+              </div>
+            </div>
+            <div class="aegis-panel-card">
+              <div class="panel-header-row">
+                <h3 class="panel-title">Average Container CPU Utilization (%)</h3>
+                <span class="pill-rollback">HPA Target: 60%</span>
+              </div>
+              <div style="height: 220px;">
+                <canvas id="cpuChartCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: AUTO-SCALING POLICIES (HPA Configuration, Scale-Out / Scale-In Controls) -->
+        <section class="deck-view" id="view-autoscaling">
+          <div class="canvas-header-row">
+            <div class="canvas-title-group">
+              <span class="core-daemon-tag">HORIZONTAL POD AUTOSCALER (HPA v2)</span>
+              <div class="canvas-h1-row">
+                <span class="engine-gear-icon">📈</span>
+                <h1 class="canvas-h1">Dynamic Elastic Auto-Scaling Policies</h1>
+              </div>
+            </div>
+            <div class="canvas-header-actions">
+              <button class="action-btn-dark" onclick="triggerTrafficSpike(500)">
+                ⚡ Simulate 500 RPS Traffic Burst
+              </button>
+            </div>
+          </div>
+
+          <div class="matrix-split-grid">
+            <div class="matrix-left-col">
+              <div class="aegis-panel-card">
+                <h2 class="panel-title">Interactive Load Generator & HPA Evaluator</h2>
+                <p class="panel-desc">Simulate live user traffic to watch HorizontalPodAutoscaler scale pods out and scale them in gracefully with cooldown protection.</p>
+                
+                <div class="traffic-slider-wrap">
+                  <div class="slider-header-row">
+                    <span>Desired Traffic Load</span>
+                    <strong class="slider-val" id="slider-val-display">100 RPS</strong>
+                  </div>
+                  <input type="range" id="traffic-slider" min="20" max="600" step="20" value="100" class="aegis-slider" oninput="updateSliderDisplay(this.value)" onchange="applySliderTraffic(this.value)">
+                </div>
+
+                <div class="preset-load-buttons">
+                  <button class="preset-btn" onclick="applyPresetRps(40)">📉 Low Traffic (40 RPS)</button>
+                  <button class="preset-btn active" onclick="applyPresetRps(100)">☕ Baseline (100 RPS)</button>
+                  <button class="preset-btn" onclick="applyPresetRps(350)">⚡ Surge (350 RPS)</button>
+                  <button class="preset-btn btn-danger-tone" onclick="applyPresetRps(550)">🔥 Flash Sale (550 RPS)</button>
+                </div>
+
+                <div class="hpa-spec-box">
+                  <div class="spec-header">HPA Kubernetes Specification (v2)</div>
+                  <pre class="yaml-code"><code>apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: production-api-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: production-api
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 45</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="matrix-right-col">
+              <div class="aegis-panel-card">
+                <h2 class="panel-title">Cloud Economics & Resource Savings</h2>
+                <div class="savings-kpi-block">
+                  <div class="savings-big-num" id="cost-savings-num">60%</div>
+                  <div class="savings-desc">Cost reduction vs over-provisioned static 5-server peak capacity</div>
+                </div>
+                <div class="economic-comparison-table">
+                  <div class="econ-row">
+                    <span>Static 24/7 Peak Allocation:</span>
+                    <strong>5 servers @ $0.18/hr = $648/mo</strong>
+                  </div>
+                  <div class="econ-row highlight">
+                    <span>Autonomous Elastic HPA:</span>
+                    <strong>2-5 servers dynamic = $259/mo</strong>
+                  </div>
+                  <div class="econ-row net">
+                    <span>Net Monthly Compute Savings:</span>
+                    <strong class="green-text">$389 / month saved</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 4: LIVE TOPOLOGY & INCIDENTS (Envoy Mesh, Incident Audit Trail) -->
+        <section class="deck-view" id="view-topology">
+          <div class="canvas-header-row">
+            <div class="canvas-title-group">
+              <span class="core-daemon-tag">SERVICE MESH ROUTING & AZ DISTRIBUTION</span>
+              <div class="canvas-h1-row">
+                <span class="engine-gear-icon">⚯</span>
+                <h1 class="canvas-h1">Live Topology & Multi-Zone Incidents</h1>
+              </div>
+            </div>
+            <div class="canvas-header-actions">
+              <button class="action-btn-outline" onclick="exportAuditLogs()">
+                Download Audit Log (JSON)
+              </button>
+            </div>
+          </div>
+
+          <div class="topology-deck-grid">
+            <div class="aegis-panel-card">
+              <h2 class="panel-title">Multi-AZ Availability Zone Topography</h2>
+              <div class="az-grid">
+                <div class="az-zone-card">
+                  <div class="az-header">
+                    <span class="az-name">us-east-1a</span>
+                    <span class="az-status-ok">Healthy</span>
+                  </div>
+                  <div class="az-pod-list" id="az-1a-pods">
+                    <!-- pods -->
+                  </div>
+                </div>
+                <div class="az-zone-card">
+                  <div class="az-header">
+                    <span class="az-name">us-east-1b</span>
+                    <span class="az-status-ok">Healthy</span>
+                  </div>
+                  <div class="az-pod-list" id="az-1b-pods">
+                    <!-- pods -->
+                  </div>
+                </div>
+                <div class="az-zone-card">
+                  <div class="az-header">
+                    <span class="az-name">us-east-1c</span>
+                    <span class="az-status-standby">Standby Canary</span>
+                  </div>
+                  <div class="az-pod-list" id="az-1c-pods">
+                    <!-- pods -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="aegis-panel-card">
+              <h2 class="panel-title">Real-Time Event Audit Stream</h2>
+              <div class="event-stream-container" id="event-stream-list">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODALS & DRAWERS -->
+  <!-- ==================================================================== -->
+
+  <!-- MODAL 1: CHAOS DRILL MODE -->
+  <div class="aegis-modal-overlay" id="chaos-drill-modal" onclick="closeModalOnBackdrop(event, 'chaos-drill-modal')">
+    <div class="aegis-modal-card">
+      <div class="modal-header-row">
+        <h3 class="modal-title">⚡ Chaos Drill & Failure Injection Mode</h3>
+        <button class="btn-close-modal" onclick="closeModal('chaos-drill-modal')">✕</button>
+      </div>
+      <p class="modal-lead">Inject simulated failures under active user traffic to test Kubernetes self-healing and zero-downtime resilience.</p>
+      
+      <div class="chaos-options-grid">
+        <div class="chaos-action-box" onclick="triggerChaos('kill_pod')">
+          <span class="chaos-emoji">💥</span>
+          <div class="chaos-info">
+            <strong>Kill Pod (Fatal Crash)</strong>
+            <p>Injects SIGKILL on worker pod. Kubernetes detects termination and replaces container with zero downtime.</p>
+          </div>
+        </div>
+
+        <div class="chaos-action-box" onclick="triggerChaos('fail_liveness')">
+          <span class="chaos-emoji">⚠️</span>
+          <div class="chaos-info">
+            <strong>Fail Liveness Probe (Deadlock)</strong>
+            <p>Forces /healthz to return HTTP 500. Kubelet detects consecutive failures and restarts container.</p>
+          </div>
+        </div>
+
+        <div class="chaos-action-box" onclick="triggerChaos('leak_memory')">
+          <span class="chaos-emoji">🧪</span>
+          <div class="chaos-info">
+            <strong>Memory Leak (OOMKill)</strong>
+            <p>Consumes RAM beyond cgroup limits. Linux kernel triggers OOMKill and Kubernetes recreates pod.</p>
+          </div>
+        </div>
+
+        <div class="chaos-action-box" onclick="triggerChaos('set_traffic', 500)">
+          <span class="chaos-emoji">⚡</span>
+          <div class="chaos-info">
+            <strong>Flash Traffic Surge (500 RPS)</strong>
+            <p>Spikes incoming requests 5x. CPU climbs to 75% and HPA dynamically scales replicas 2 → 5 pods.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer-actions">
+        <button class="action-btn-outline" onclick="triggerChaos('reset')">Reset to Nominal Baseline</button>
+        <button class="action-btn-dark" onclick="triggerFullDemonstration()">Run Full 5-Phase Test</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: REMEDIATION AUDIT LOG -->
+  <div class="aegis-modal-overlay" id="remediation-log-modal" onclick="closeModalOnBackdrop(event, 'remediation-log-modal')">
+    <div class="aegis-modal-card modal-large">
+      <div class="modal-header-row">
+        <h3 class="modal-title">📋 Automated Remediation Log & Audit Trail</h3>
+        <button class="btn-close-modal" onclick="closeModal('remediation-log-modal')">✕</button>
+      </div>
+      <div class="modal-filter-row">
+        <input type="text" id="log-search-filter" class="modal-search-input" placeholder="Filter by pod, playbook, source, or level..." oninput="filterModalLogs(this.value)">
+        <button class="action-btn-outline" onclick="exportAuditLogs()">Export JSON</button>
+      </div>
+      <div class="modal-log-stream" id="modal-log-stream">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ALERTS & INCIDENT STATUS -->
+  <div class="aegis-modal-overlay" id="alerts-modal" onclick="closeModalOnBackdrop(event, 'alerts-modal')">
+    <div class="aegis-modal-card">
+      <div class="modal-header-row">
+        <h3 class="modal-title">🚨 Active Cluster Alerts & Safety States</h3>
+        <button class="btn-close-modal" onclick="closeModal('alerts-modal')">✕</button>
+      </div>
+      <div class="alerts-list">
+        <div class="alert-item-card degraded">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-details">
+            <strong>HighCpuUtilization (Warning)</strong>
+            <p>payment-service average CPU reached 68.4%. Auto-scaling policy active (rebalancing across nodes).</p>
+            <small>Triggered: 3m ago • Remediation: HPA auto-scaling engaged</small>
+          </div>
+        </div>
+        <div class="alert-item-card degraded">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-details">
+            <strong>MemoryPressure (Warning)</strong>
+            <p>cgroup memory usage in pod-api-prod-b2 climbed to 122MB. Below 512MB limit, no eviction necessary.</p>
+            <small>Triggered: 12m ago • Remediation: Garbage collection scheduled</small>
+          </div>
+        </div>
+        <div class="alert-item-card ok">
+          <div class="alert-icon">✓</div>
+          <div class="alert-details">
+            <strong>Zero-Downtime Guarantee (Nominal)</strong>
+            <p>100% of user transactions served with 2xx status. Zero dropped connections during all pod rotations.</p>
+            <small>Verified: Continuous synthetic telemetry probe</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: GUARDIAN SRE COPILOT ASSISTANT -->
+  <div class="aegis-modal-overlay" id="guardian-assistant-modal" onclick="closeModalOnBackdrop(event, 'guardian-assistant-modal')">
+    <div class="aegis-modal-card modal-large">
+      <div class="modal-header-row">
+        <div class="copilot-title-row">
+          <img src="/static/guardian_avatar.jpg" alt="Avatar" class="mini-avatar">
+          <h3 class="modal-title">Marcus Vance & Ava • SRE Copilot</h3>
+        </div>
+        <button class="btn-close-modal" onclick="closeModal('guardian-assistant-modal')">✕</button>
+      </div>
+      <p class="modal-lead">Ask any technical, architectural, or Kubernetes resilience question:</p>
+      
+      <div class="copilot-faq-chips" id="copilot-faqs">
+        <!-- FAQ buttons populated dynamically -->
+      </div>
+
+      <div class="copilot-chat-area" id="copilot-chat-history">
+        <div class="chat-bubble bot">
+          <strong>Ava Copilot:</strong>
+          <p>Hello Marcus! Platform telemetry is nominal. 14,820 nodes online, 9/9 safety interlocks engaged. Ask me anything about HPA stabilization cooldowns, liveness vs readiness probes, or zero-downtime pod recovery.</p>
+        </div>
+      </div>
+
+      <form class="copilot-input-form" onsubmit="handleCopilotSubmit(event)">
+        <input type="text" id="copilot-input" placeholder="Type a question (e.g. 'Why does HPA wait 45s before scaling down?')...">
+        <button type="submit" class="action-btn-dark">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

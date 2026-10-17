@@ -1,0 +1,30 @@
+global:
+  resolve_timeout: 30s
+
+route:
+  group_by: ['alertname', 'pod_name', 'component']
+  group_wait: 5s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: "automated-recovery-webhook"
+  routes:
+    - match:
+        action: automated-remediation
+      receiver: "automated-recovery-webhook"
+      continue: true
+    - match:
+        action: auto-scale
+      receiver: "automated-recovery-webhook"
+      continue: true
+
+receivers:
+  - name: "automated-recovery-webhook"
+    webhook_configs:
+      - url: "http://recovery-engine:9099/alerts"
+        send_resolved: true
+        http_config:
+          follow_redirects: true
+      - url: "http://host.docker.internal:9099/alerts"
+        send_resolved: true
+      - url: "http://localhost:9099/alerts"
+        send_resolved: true
